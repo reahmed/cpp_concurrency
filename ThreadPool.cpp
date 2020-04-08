@@ -17,7 +17,7 @@ using namespace std::chrono_literals;
 class ThreadPool {
 
     // TODOs:
-    // 1. Support jobs with input / output params.
+    // 1. Support jobs with input / output.
     // 2. Support timing out on jobs.
     // 3. Implement hard-stop that doesn't wait for job queue to clear out.
     
@@ -55,6 +55,7 @@ public:
         }
     }
 
+    // Lower priority number = higher priority.
     size_t submit(JobType job, int priority) {
         
         std::unique_lock<std::mutex> lock(mtx);
@@ -124,8 +125,6 @@ void sleep() {
 
 int main() {
 
-    using namespace std::chrono_literals;
-
     auto start = std::chrono::system_clock::now();
     {
         ThreadPool tp(4);
@@ -133,13 +132,17 @@ int main() {
             tp.submit(&sleep, 11 - i);
         }
 
-        std::this_thread::sleep_for(5000ms);
+        std::this_thread::sleep_for(5s);
 
         for (int i = 0; i < 11; ++i) {
             tp.submit(&sleep, 11 - i);
         }
     }
     auto end = std::chrono::system_clock::now();
+
+    // Expect total runtime to be around 8 seconds.  
+    // 11 tasks launch at t = 0 and complete around t = 3s with 4 workers.
+    // 11 tasks launch at t = 5s, complete 3 seconds later.
 
     std::cout << "Total runtime: "
               << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
